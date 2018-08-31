@@ -24,7 +24,7 @@ var generateLoginUrl = function(user) {
   const state = uuidv1();
   states[state] = user;
   var path = '/oauth2/authorize?redirect_uri=' + redirect_uri + '&response_type=code&client_id=gloot-utils&scope=SUPER_USER&state=' + state;
-  return 'https://api.gloot.com' + path;
+  return process.env.API_BASE_PATH + path;
 }
 
 /** This is only here for debugging purposes.
@@ -55,7 +55,7 @@ app.get('/oauth2', function(req, res) {
     var urlPath = '/oauth2/token?grant_type=authorization_code&code=' + code + '&redirect_uri=' + redirect_uri + '&client_id=gloot-utils';
     var options = {
       method : "POST",
-      url : 'https://api.gloot.com' + urlPath,
+      url : process.env.API_BASE_PATH + urlPath,
       data: '',
       headers: {
         'Authorization' : 'Basic Z2xvb3QtdXRpbHM6ankqKylxKDRqQ0U/VlQ0ZQ=='
