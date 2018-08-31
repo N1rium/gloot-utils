@@ -13,14 +13,35 @@ var states = { };
 
 app.use(bodyParser.json(), express.static(dist));
 
-app.get('/login', function(req, res) {
-  const { user } = req.query;
+/** Generates a login url for a specific User.
+ * 
+ * Call this from within a /slack command in order to generate
+ * a login button in the response message.
+ *
+ * @param string user - The slack verified user
+ */
+var generateLoginUrl = function(user) {
   const state = uuidv1();
   states[state] = user;
   var path = '/oauth2/authorize?redirect_uri=' + redirect_uri + '&response_type=code&client_id=gloot-utils&scope=SUPER_USER&state=' + state;
-  res.status(200).json({ redirect_uri : 'https://api.gloot.com' + path});
+  return 'https://api.gloot.com' + path;
+}
+
+/** This is only here for debugging purposes.
+ * Normally the login flow is initiated from within a /slack command
+ * and only #generateLoginUrl(user) would be called.
+ */
+app.get('/login', function(req, res) {
+  const { user } = req.query;
+  res.status(200).json({ redirect_uri : generateLoginUrl(user) });
 });
 
+/** Handles the oauth2 authorization_code stage.
+ * 
+ * -- Do NOT change this url --
+ *
+ * Only this specific redirect url is allowed for the client 'gloot-utils'
+ */
 app.get('/oauth2', function(req, res) {
   const { code, state } = req.query;
   const user = states[state];
@@ -30,7 +51,6 @@ app.get('/oauth2', function(req, res) {
     res.status(403).json({error : "Invalid state"});
   }
 
-  console.log("state = " + state);
   if (code) {
     var urlPath = '/oauth2/token?grant_type=authorization_code&code=' + code + '&redirect_uri=' + redirect_uri + '&client_id=gloot-utils';
     var options = {
@@ -43,7 +63,6 @@ app.get('/oauth2', function(req, res) {
     }
     axios(options)
     .then(response => {
-      console.log("access_token = " + response.data.access_token);
       tokens[user] = response.data.access_token;
       res.sendFile(path.join(dist, 'logged_in.html'));
     })
