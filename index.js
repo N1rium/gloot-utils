@@ -13,29 +13,13 @@ const API_BASE_PATH = process.env.API_BASE_PATH || 'https://api.gloot.com';
 const uuidv1 = require('uuid/v1');
 const crypto = require('crypto');
 const jwtDecode = require('jwt-decode');
+const rawBodySaver = require('raw-body');
 
 // Create the adapter using the app's signing secret, read from environment variable
 //const slackInteractions = createMessageAdapter(process.env.SLACK_SIGNING_SECRET);
 
 var tokens = { };
 var states = { };
-
-function rawBody(req, res, next) {
-  req.setEncoding('utf8');
-  req.rawBody = '';
-  req.on('data', function(chunk) {
-    req.rawBody += chunk;
-  });
-  req.on('end', function(){
-    next();
-  });
-}
-
-var rawBodySaver = function (req, res, buf, encoding) {
-  if (buf && buf.length) {
-    req.rawBody = buf.toString(encoding || 'utf8');
-  }
-}
 
 app.use(bodyParser.json({verify: rawBodySaver}), express.static(dist));
 app.use(bodyParser.urlencoded({verify: rawBodySaver, extended: false}));
