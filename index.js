@@ -75,7 +75,7 @@ slack.addRoute({path : "/slack/whoami", login: true, handler: (req, res) => {
 slack.addRoute({path : "/slack/guser", login: false, handler: (req, res) => {
   console.log(tokens, tokens);
   res.status(200).json({text : "Fetching user data"});
-  callAPI(req, "GET", "/user/" + req.rawBody, '').then(response => {
+  callAPI(req, "GET", "/user/" + req.body.text.trim(), '').then(response => {
     respond(req.body.response_url, {attachments: [{
       title: response.data.username,
       text: JSON.stringify(response.data)
