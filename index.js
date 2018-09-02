@@ -28,7 +28,14 @@ function rawBody(req, res, next) {
   });
 }
 
-app.use(rawBody, bodyParser.json(), express.static(dist));
+var rawBodySaver = function (req, res, buf, encoding) {
+  if (buf && buf.length) {
+    req.rawBody = buf.toString(encoding || 'utf8');
+  }
+}
+
+app.use(bodyParser.json({verify: rawBodySaver}), express.static(dist));
+app.use(bodyParser.urlencoded({verify: rawBodySaver, extended: false}));
 
 /** Generates a login url for a specific User.
  * 
