@@ -36,8 +36,8 @@ var generateLoginUrl = function(user) {
 //app.use('/slack/interactions', slackInteractions.expressMiddleware());
 
 app.post('/slack/glogin', function(req, res) {
-  const timestamp = req.headers['X-Slack-Request-Timestamp'];
-  const signature = req.headers['X-Slack-Signature'];
+  const timestamp = req.headers['x-slack-request-timestamp'];
+  const signature = req.headers['x-slack-signature'];
 
   if (new Date().getTime() - (timestamp * 1000) > 60 * 5) {
     res.status(200).json({text : "ERROR: Replaying not allowed"});
