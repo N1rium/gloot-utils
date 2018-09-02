@@ -37,6 +37,10 @@ var rawBodySaver = function (req, res, buf, encoding) {
 app.use(bodyParser.json({verify: rawBodySaver}), express.static(dist));
 app.use(bodyParser.urlencoded({verify: rawBodySaver, extended: false}));
 
+var saveTokenForUser = function(user, token) {
+  tokens[user] = response.data.access_token;
+}
+
 /** Generates a login url for a specific User.
  * 
  * Call this from within a /slack command in order to generate
@@ -144,7 +148,7 @@ app.get('/oauth2', function(req, res) {
     }
     axios(options)
     .then(response => {
-      tokens[user] = response.data.access_token;
+      saveTokenForUser(user, response.data.access_token);
       res.sendFile(path.join(dist, 'logged_in.html'));
       respond(response_url, {text : 'You are logged in as: ' + response.data.user.username + " - " + response.data.user.email});
     })
