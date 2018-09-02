@@ -163,7 +163,8 @@ app.get('/oauth2', function(req, res) {
           respond(responseUrl, {
             author_icon : claims.avatar,
             text: 'You are logged in as: ' + claims.username + " - " + claims.email, attachments: [
-              { text: claims.avatar }
+              { author_icon : claims.avatar,
+                text: claims.avatar }
             ]
           })
             .then(() => {
