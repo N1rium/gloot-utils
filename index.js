@@ -9,8 +9,11 @@ const dist = path.resolve('./src');
 const axios = require('axios');
 const redirect_uri = process.env.REDIRECT_URI || 'https://gloot-utils.herokuapp.com/oauth2';
 const SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET || '5902a6952b267a565aca98f81f601398';
+const API_BASE_PATH = process.env.API_BASE_PATH || 'https://api.gloot.com';
 const uuidv1 = require('uuid/v1');
 const crypto = require('crypto');
+const jwtDecode = require('jwt-decode');
+
 // Create the adapter using the app's signing secret, read from environment variable
 //const slackInteractions = createMessageAdapter(process.env.SLACK_SIGNING_SECRET);
 
@@ -38,7 +41,7 @@ app.use(bodyParser.json({verify: rawBodySaver}), express.static(dist));
 app.use(bodyParser.urlencoded({verify: rawBodySaver, extended: false}));
 
 var saveTokenForUser = function(user, token) {
-  tokens[user] = response.data.access_token;
+  tokens[user] = token;
 }
 
 /** Generates a login url for a specific User.
@@ -52,7 +55,7 @@ var generateLoginUrl = function(user, responseUrl) {
   const state = uuidv1();
   states[state] = {user : user, responseUrl : responseUrl};
   var path = '/oauth2/authorize?redirect_uri=' + redirect_uri + '&response_type=code&client_id=gloot-utils&scope=SUPER_USER&state=' + state;
-  return process.env.API_BASE_PATH + path;
+  return API_BASE_PATH + path;
 }
 
 //app.use('/slack/interactions', slackInteractions.expressMiddleware());
@@ -129,8 +132,12 @@ app.get('/login', function(req, res) {
  */
 app.get('/oauth2', function(req, res) {
   const { code, state } = req.query;
+  console.log(states);
+  console.log(req.query);
+  console.log(states[state]);
   const {user, responseUrl} = states[state];
-  delete states[state];
+  if (states[state])
+    delete states[state];
 
   if (!user) {
     res.status(403).json({error : "Invalid state, user=" + user + ", response_url = " + response_url});
@@ -140,28 +147,39 @@ app.get('/oauth2', function(req, res) {
     var urlPath = '/oauth2/token?grant_type=authorization_code&code=' + code + '&redirect_uri=' + redirect_uri + '&client_id=gloot-utils';
     var options = {
       method : "POST",
-      url : process.env.API_BASE_PATH + urlPath,
+      url : API_BASE_PATH + urlPath,
       data: '',
       headers: {
         'Authorization' : 'Basic Z2xvb3QtdXRpbHM6ankqKylxKDRqQ0U/VlQ0ZQ=='
       }
     }
     axios(options)
-    .then(response => {
-      saveTokenForUser(user, response.data.access_token);
-      respond(responseUrl, {text : 'You are logged in as: ' + response.data.user.username + " - " + response.data.user.email})
-      .then( () => {
-        res.sendFile(path.join(dist, 'logged_in.html'));
+      .then(response => {
+        saveTokenForUser(user, response.data.access_token);
+        console.log(response.data);
+        const claims = jwtDecode(response.data.access_token);
+        console.log(claims);
+        if (responseUrl) {
+          respond(responseUrl, {
+            text: 'You are logged in as: ' + claims.username + " - " + claims.email, attachments: [
+              { text: claims.avatar }
+            ]
+          })
+            .then(() => {
+              res.sendFile(path.join(dist, 'logged_in.html'));
+            })
+            .catch(error => {
+              res.status(500).json({ error: error });
+            })
+        } else {
+          res.sendFile(path.join(dist, 'logged_in.html'));
+        }
       })
       .catch(error => {
-        res.status(500).json({error : error});
-      })
-    })
-    .catch(error => {
-      console.log(error);
-      res.status(403);
-    });
-    }
+        console.log(error);
+        res.status(403);
+      });
+  }
 });
 
 app.get('*', function(req, res) {
