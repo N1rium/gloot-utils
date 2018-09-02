@@ -25,6 +25,12 @@ var saveTokenForUser = function(user, token) {
   tokens[user] = token;
 }
 
+var removeTokenForUser = function (user) {
+  try {
+    delete tokens[user];
+  } catch (e) { }
+}
+
 /** Generates a login url for a specific User.
  * 
  * Call this from within a /slack command in order to generate
@@ -81,6 +87,11 @@ slack.addRoute({path : "/slack/guser", login: false, handler: (req, res) => {
       text: JSON.stringify(response.data)
     }]});
   }).catch(error => handleError(error, req.body.response_url));
+}});
+
+slack.addRoute({path : "/slack/glogout", login: false, handler: (req, res) => {
+  removeTokenForUser(req.body.user_id);
+  res.status(200).json({text : "Logged out"});
 }});
 
 slack.addRoute({path : "/slack/guserFull", login: true, handler: (req, res) => {
