@@ -109,7 +109,7 @@ var respond = function(url, data) {
       'Content-Type' : 'application/json'
     }
   }
-  axios(options);
+  return axios(options);
 }
 
 /** This is only here for debugging purposes.
@@ -149,8 +149,13 @@ app.get('/oauth2', function(req, res) {
     axios(options)
     .then(response => {
       saveTokenForUser(user, response.data.access_token);
-      res.sendFile(path.join(dist, 'logged_in.html'));
-      respond(responseUrl, {text : 'You are logged in as: ' + response.data.user.username + " - " + response.data.user.email});
+      respond(responseUrl, {text : 'You are logged in as: ' + response.data.user.username + " - " + response.data.user.email})
+      .then( () => {
+        res.sendFile(path.join(dist, 'logged_in.html'));
+      })
+      .catch(error => {
+        res.status(500).json({error : error});
+      })
     })
     .catch(error => {
       console.log(error);
