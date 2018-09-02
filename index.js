@@ -17,7 +17,18 @@ const uuidv1 = require('uuid/v1');
 var tokens = { };
 var states = { };
 
-app.use(bodyParser.json(), express.static(dist));
+function rawBody(req, res, next) {
+  req.setEncoding('utf8');
+  req.rawBody = '';
+  req.on('data', function(chunk) {
+    req.rawBody += chunk;
+  });
+  req.on('end', function(){
+    next();
+  });
+}
+
+app.use(rawBody, bodyParser.json(), express.static(dist));
 
 /** Generates a login url for a specific User.
  * 
@@ -44,7 +55,7 @@ app.post('/slack/glogin', function(req, res) {
     return;
   }
   
-  const string = 'v0:' + timestamp + ':' + req.body;
+  const string = 'v0:' + timestamp + ':' + req.rawBody;
   const expectedSignature = sha256(string);
 
   if (signature != expectedSignature) {
