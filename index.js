@@ -120,7 +120,7 @@ app.get('/oauth2', function(req, res) {
   delete states[state];
 
   if (!user) {
-    res.status(403).json({error : "Invalid state"});
+    res.status(403).json({error : "Invalid state, user=" + user + ", response_url = " + response_url});
   }
 
   if (code) {
