@@ -40,7 +40,7 @@ app.post('/slack/glogin', function(req, res) {
   const signature = req.headers['X-Slack-Signature'];
 
   if (new Date().getTime() - (timestamp * 1000) > 60 * 5) {
-    res.status(200).json({text : "Replaying not allowed"});
+    res.status(200).json({text : "ERROR: Replaying not allowed"});
     return;
   }
   
@@ -48,7 +48,11 @@ app.post('/slack/glogin', function(req, res) {
   const expectedSignature = sha256(string);
 
   if (signature != expectedSignature) {
-    res.status(200).json({text : "Invalid signature"});
+    res.status(200).json({text : "ERROR: Invalid signature", attachments: [
+      {text : "Expected: " + expectedSignature},
+      {text : "Provided: " + signature},
+      {text : "Payload: " + string}
+    ]});
     return;
   }
 
