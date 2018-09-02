@@ -161,10 +161,10 @@ app.get('/oauth2', function(req, res) {
         console.log(claims);
         if (responseUrl) {
           respond(responseUrl, {
-            author_icon : claims.avatar,
-            text: 'You are logged in as', attachments: [
+            text: 'You are logged in', attachments: [
               {
-                footer : claims.username + " - " + claims.email,
+                text : claims.username,
+                footer : claims.email + " - " + claims.glootId,
                 footer_icon : claims.avatar
               }
             ]
