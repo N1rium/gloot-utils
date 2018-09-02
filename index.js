@@ -50,7 +50,7 @@ app.post('/slack/glogin', function(req, res) {
   const timestamp = req.headers['x-slack-request-timestamp'];
   const signature = req.headers['x-slack-signature'];
 
-  if (new Date().getTime() - (timestamp * 1000) > 60 * 5) {
+  if ((new Date().getTime() / 1000) - timestamp > 60 * 5) {
     res.status(200).json({text : "ERROR: Replaying not allowed"});
     return;
   }
