@@ -8,19 +8,16 @@ var http = require('http').Server(app);
 const dist = path.resolve('./src');
 const axios = require('axios');
 const redirect_uri = process.env.REDIRECT_URI || 'https://gloot-utils.herokuapp.com/oauth2';
-const SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET || '5902a6952b267a565aca98f81f601398';
 const API_BASE_PATH = process.env.API_BASE_PATH || 'https://api.gloot.com';
 const uuidv1 = require('uuid/v1');
-const crypto = require('crypto');
 const jwtDecode = require('jwt-decode');
-const rawBodySaver = require('raw-body');
-
-// Create the adapter using the app's signing secret, read from environment variable
-//const slackInteractions = createMessageAdapter(process.env.SLACK_SIGNING_SECRET);
+const rawBodySaver = require('./raw-body').rawBodySaver;
+const { slackSignatureValidation, slack } = require('./gloot-slack');
 
 var tokens = { };
 var states = { };
 
+const slackLoggedInMiddleware = slack({login: true}, (user) => tokens[user], (user, url) => generateLoginUrl(user, url));
 app.use(bodyParser.json({verify: rawBodySaver}), express.static(dist));
 app.use(bodyParser.urlencoded({verify: rawBodySaver, extended: false}));
 
@@ -38,34 +35,12 @@ var saveTokenForUser = function(user, token) {
 var generateLoginUrl = function(user, responseUrl) {
   const state = uuidv1();
   states[state] = {user : user, responseUrl : responseUrl};
+  console.log(arguments);
   var path = '/oauth2/authorize?redirect_uri=' + redirect_uri + '&response_type=code&client_id=gloot-utils&scope=SUPER_USER&state=' + state;
   return API_BASE_PATH + path;
 }
 
-//app.use('/slack/interactions', slackInteractions.expressMiddleware());
-
-app.post('/slack/glogin', function(req, res) {
-  const timestamp = req.headers['x-slack-request-timestamp'];
-  const signature = req.headers['x-slack-signature'];
-
-  if ((new Date().getTime() / 1000) - timestamp > 60 * 5) {
-    res.status(200).json({text : "ERROR: Replaying not allowed"});
-    return;
-  }
-  
-  const string = 'v0:' + timestamp + ':' + req.rawBody;
-  const expectedSignature = 'v0=' + crypto.createHmac('sha256', SLACK_SIGNING_SECRET)
-                   .update(string)
-                   .digest('hex');
-
-  if (signature != expectedSignature) {
-    res.status(200).json({text : "ERROR: Invalid signature", attachments: [
-      {text : "Expected: " + expectedSignature},
-      {text : "Provided: " + signature},
-      {text : "Payload: " + string}
-    ]});
-    return;
-  }
+app.post('/slack/glogin', slackLoggedInMiddleware, function(req, res) {
   res.status(200).json({text : generateLoginUrl(req.body.user_id, req.body.response_url)});
 });
 
@@ -106,7 +81,7 @@ app.get('/oauth2', function(req, res) {
     delete states[state];
 
   if (!user) {
-    res.status(403).json({error : "Invalid state, user=" + user + ", response_url = " + response_url});
+    res.status(403).json({error : "Invalid state, user=" + user + ", response_url = " + responseUrl});
   }
 
   if (code) {
