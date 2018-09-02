@@ -16,20 +16,23 @@ var Slack = function (options) {
         if (!route)
             next();
         else {
-            req.token = tokenProvider(req.body.user_id);
-            if (route.login && !req.token) {
-                res.status(200).json({
-                    attachments: [
-                        {
-                            "title": "Login required",
-                            "text": loginUrlProvider(req.body.user_id, req.body.response_url)
-                        }
-                    ]
-                });
-                return; // skip next
-            }
+            exports.slackSignatureValidation(req, res, () => {
+                req.token = tokenProvider(req.body.user_id);
+                if (route.login && !req.token) {
+                    res.status(200).json({
+                        attachments: [
+                            {
+                                "title": "Login required",
+                                "text": loginUrlProvider(req.body.user_id, req.body.response_url)
+                            }
+                        ]
+                    });
+                    return; // skip next
+                }
 
-            route.handler(req, res);
+                route.handler(req, res);
+                return;
+            });
         }
     }
 };
@@ -40,9 +43,7 @@ exports.slack = slack;
 
 exports.slackMiddleware = function (options) {
     return function (req, res, next) {
-        exports.slackSignatureValidation(req, res, () => {
-            slack.route(req, res, options.tokenProvider, options.loginUrlProvider, next);
-        });
+        slack.route(req, res, options.tokenProvider, options.loginUrlProvider, next);
     }
 };
 
