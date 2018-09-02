@@ -145,7 +145,6 @@ app.get('/oauth2', function(req, res) {
           respond(responseUrl, {
             text: 'You are logged in', attachments: [
               {
-                thumb_url : claims.avatar,
                 text : claims.username,
                 footer : claims.email + " - " + claims.glootId,
                 footer_icon : claims.avatar
