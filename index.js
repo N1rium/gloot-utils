@@ -161,6 +161,7 @@ app.get('/oauth2', function(req, res) {
         console.log(claims);
         if (responseUrl) {
           respond(responseUrl, {
+            author_icon : claims.avatar,
             text: 'You are logged in as: ' + claims.username + " - " + claims.email, attachments: [
               { text: claims.avatar }
             ]
