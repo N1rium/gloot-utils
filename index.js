@@ -35,7 +35,7 @@ var generateLoginUrl = function(user) {
 
 //app.use('/slack/interactions', slackInteractions.expressMiddleware());
 
-app.get('/slack/glogin', function(req, res) {
+app.post('/slack/glogin', function(req, res) {
   const timestamp = req.headers['X-Slack-Request-Timestamp'];
   const signature = req.headers['X-Slack-Signature'];
 
