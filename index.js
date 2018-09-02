@@ -11,6 +11,7 @@ const axios = require('axios');
 const redirect_uri = process.env.REDIRECT_URI || 'https://gloot-utils.herokuapp.com/oauth2';
 const SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET || '5902a6952b267a565aca98f81f601398';
 const uuidv1 = require('uuid/v1');
+const crypto = require('crypto');
 // Create the adapter using the app's signing secret, read from environment variable
 //const slackInteractions = createMessageAdapter(process.env.SLACK_SIGNING_SECRET);
 
@@ -56,7 +57,9 @@ app.post('/slack/glogin', function(req, res) {
   }
   
   const string = 'v0:' + timestamp + ':' + req.rawBody;
-  const expectedSignature = sha256(string);
+  const expectedSignature = 'v0=' + crypto.createHmac('sha256', SLACK_SIGNING_SECRET)
+                   .update(string)
+                   .digest('hex');
 
   if (signature != expectedSignature) {
     res.status(200).json({text : "ERROR: Invalid signature", attachments: [
