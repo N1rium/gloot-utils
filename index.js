@@ -37,9 +37,9 @@ app.use(rawBody, bodyParser.json(), express.static(dist));
  *
  * @param string user - The slack verified user
  */
-var generateLoginUrl = function(user) {
+var generateLoginUrl = function(user, responseUrl) {
   const state = uuidv1();
-  states[state] = user;
+  states[state] = {user : user, responseUrl : responseUrl};
   var path = '/oauth2/authorize?redirect_uri=' + redirect_uri + '&response_type=code&client_id=gloot-utils&scope=SUPER_USER&state=' + state;
   return process.env.API_BASE_PATH + path;
 }
@@ -69,8 +69,7 @@ app.post('/slack/glogin', function(req, res) {
     return;
   }
 
-  console.log(res.body);
-  res.status(200).json({text : generateLoginUrl(req.body.user_id)});
+  res.status(200).json({text : generateLoginUrl(req.params.user_id, req.params.response_url)});
  /*
  token=gIkuvaNzQIHg97ATvDxqgjtO
 &team_id=T0001
@@ -87,6 +86,18 @@ app.post('/slack/glogin', function(req, res) {
 &trigger_id=13345224609.738474920.8088930838d88f008e0
 */
 });
+
+var respond = function(url, data) {
+  var options = {
+    method : "POST",
+    url : url,
+    data: data,
+    headers: {
+      'Content-Type' : 'application/json'
+    }
+  }
+  axios(options);
+}
 
 /** This is only here for debugging purposes.
  * Normally the login flow is initiated from within a /slack command
@@ -105,7 +116,7 @@ app.get('/login', function(req, res) {
  */
 app.get('/oauth2', function(req, res) {
   const { code, state } = req.query;
-  const user = states[state];
+  const {user, response_url} = states[state];
   delete states[state];
 
   if (!user) {
@@ -126,6 +137,7 @@ app.get('/oauth2', function(req, res) {
     .then(response => {
       tokens[user] = response.data.access_token;
       res.sendFile(path.join(dist, 'logged_in.html'));
+      respond(response_url, {text : 'You are logged in as: ' + response.data.user.username + " - " + response.data.user.email});
     })
     .catch(error => {
       console.log(error);
