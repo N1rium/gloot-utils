@@ -94,6 +94,29 @@ slack.addRoute({path : "/slack/guserFull", login: true, handler: (req, res) => {
   }).catch(error => handleError(error, req.body.response_url));
 }});
 
+slack.addRoute({path : "/slack/gaddRole", login: true, handler: (req, res) => {
+  console.log(tokens, tokens);
+  res.status(200).json({text : "Adding role"});
+  let p = req.body.text.split(" ");
+  callAPI(req, "POST", "/roles/" + p[0] + "/" + p[1], '').then(response => {
+    respond(req.body.response_url, {attachments: [{
+      title: "Role added",
+      text: JSON.stringify(response.data)
+    }]});
+  }).catch(error => handleError(error, req.body.response_url));
+}});
+
+slack.addRoute({path : "/slack/gdelRole", login: true, handler: (req, res) => {
+  console.log(tokens, tokens);
+  res.status(200).json({text : "Adding role"});
+  let p = req.body.text.split(" ");
+  callAPI(req, "DELETE", "/roles/" + p[0] + "/" + p[1], '').then(response => {
+    respond(req.body.response_url, {attachments: [{
+      title: "Role added",
+      text: JSON.stringify(response.data)
+    }]});
+  }).catch(error => handleError(error, req.body.response_url));
+}});
 
 var callAPI = function (req, method, path, data) {
   let headers = {};
