@@ -17,10 +17,9 @@ const { slackSignatureValidation, slackMiddleware, slack } = require('./gloot-sl
 var tokens = { };
 var states = { };
 
-const slackLoggedInMiddleware = slackMiddleware({login: false}, (user) => tokens[user], (user, url) => generateLoginUrl(user, url));
 app.use(bodyParser.json({verify: rawBodySaver}), express.static(dist));
 app.use(bodyParser.urlencoded({verify: rawBodySaver, extended: false}));
-app.use(slackMiddleware((user) => tokens[user], (user, url) => generateLoginUrl(user, url)));
+app.use(slackMiddleware({ tokenProvider: (user) => tokens[user], loginUrlProvider: (user, url) => generateLoginUrl(user, url) }));
 
 var saveTokenForUser = function(user, token) {
   tokens[user] = token;
@@ -37,11 +36,19 @@ var generateLoginUrl = function(user, responseUrl) {
   const state = uuidv1();
   states[state] = {user : user, responseUrl : responseUrl};
   console.log(arguments);
-  var path = '/oauth2/authorize?redirect_uri=' + redirect_uri + '&response_type=code&client_id=gloot-utils&scope=SUPER_USER&state=' + state;
+  let path = '/oauth2/authorize?redirect_uri=' + redirect_uri + '&response_type=code&client_id=gloot-utils&scope=SUPER_USER&state=' + state;
   return API_BASE_PATH + path;
 }
 
 var handleError = function(error, url) {
+  if (error && error.response && error.response.data)
+    error = error.response.data;
+
+  if (!url) {
+    console.log(error);
+    return;
+  }
+
   respond(url, {attachments : [
     {
       title: "Error",
@@ -59,38 +66,46 @@ slack.addRoute({path : "/slack/whoami", login: true, handler: (req, res) => {
   res.status(200).json({text : "Fetching user data"});
   callAPI(req, "GET", "/user", '').then(response => {
     respond(req.body.response_url, {attachments: [{
-      title: response.body.username,
-      text: response.body
+      title: response.data.username,
+      text: JSON.stringify(response.data)
     }]});
   }).catch(error => handleError(error, req.body.response_url));
 }});
 
 slack.addRoute({path : "/slack/guser", login: false, handler: (req, res) => {
+  console.log(tokens, tokens);
   res.status(200).json({text : "Fetching user data"});
-  callAPI(req, "GET", "/user/" + req.body.text, '').then(response => {
+  callAPI(req, "GET", "/user/" + req.rawBody, '').then(response => {
     respond(req.body.response_url, {attachments: [{
-      title: response.body.username,
-      text: response.body
+      title: response.data.username,
+      text: JSON.stringify(response.data)
     }]});
   }).catch(error => handleError(error, req.body.response_url));
 }});
 
 var callAPI = function (req, method, path, data) {
-  var headers = {};
+  let headers = {};
   if (req.token)
     headers.Authorization = "Bearer " + req.token;
 
-  var options = {
+  let options = {
     method: method,
     url: API_BASE_PATH + "/api/v1" + path,
     data: data,
     headers
   }
+  console.log(options);
+  console.log(JSON.stringify(options));
+  console.log("kuk");
   return axios(options);
 }
 
 var respond = function(url, data) {
-  var options = {
+  if (!url) {
+    console.log(data);
+    return;
+  }
+  let options = {
     method : "POST",
     url : url,
     data: data,
@@ -130,8 +145,8 @@ app.get('/oauth2', function(req, res) {
   }
 
   if (code) {
-    var urlPath = '/oauth2/token?grant_type=authorization_code&code=' + code + '&redirect_uri=' + redirect_uri + '&client_id=gloot-utils';
-    var options = {
+    let urlPath = '/oauth2/token?grant_type=authorization_code&code=' + code + '&redirect_uri=' + redirect_uri + '&client_id=gloot-utils';
+    let options = {
       method : "POST",
       url : API_BASE_PATH + urlPath,
       data: '',

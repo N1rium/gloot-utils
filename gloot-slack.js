@@ -38,11 +38,10 @@ var slack = new Slack();
 
 exports.slack = slack;
 
-exports.slackMiddleware = function (options, tokenProvider, loginUrlProvider) {
+exports.slackMiddleware = function (options) {
     return function (req, res, next) {
-        console.log("inside slackMiddleware");
         exports.slackSignatureValidation(req, res, () => {
-            slack.route(req, res, tokenProvider, loginUrlProvider, next);
+            slack.route(req, res, options.tokenProvider, options.loginUrlProvider, next);
         });
     }
 };
@@ -61,7 +60,7 @@ exports.slackSignatureValidation = function (req, res, next) {
         .update(string)
         .digest('hex');
 
-    if (false && signature != expectedSignature) {
+    if (signature != expectedSignature) {
         res.status(200).json({
             text: "ERROR: Invalid signature", attachments: [
                 { text: "Expected: " + expectedSignature },
