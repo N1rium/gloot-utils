@@ -12,7 +12,7 @@ const redirect_uri = process.env.REDIRECT_URI || 'https://gloot-utils.herokuapp.
 const SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET || '5902a6952b267a565aca98f81f601398';
 const uuidv1 = require('uuid/v1');
 // Create the adapter using the app's signing secret, read from environment variable
-const slackInteractions = createMessageAdapter(process.env.SLACK_SIGNING_SECRET);
+//const slackInteractions = createMessageAdapter(process.env.SLACK_SIGNING_SECRET);
 
 var tokens = { };
 var states = { };
@@ -33,7 +33,7 @@ var generateLoginUrl = function(user) {
   return process.env.API_BASE_PATH + path;
 }
 
-app.use('/slack/interactions', slackInteractions.expressMiddleware());
+//app.use('/slack/interactions', slackInteractions.expressMiddleware());
 
 app.get('/slack/glogin', function(req, res) {
   const timestamp = req.headers['X-Slack-Request-Timestamp'];
