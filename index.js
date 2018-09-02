@@ -129,7 +129,7 @@ app.get('/login', function(req, res) {
  */
 app.get('/oauth2', function(req, res) {
   const { code, state } = req.query;
-  const {user, response_url} = states[state];
+  const {user, responseUrl} = states[state];
   delete states[state];
 
   if (!user) {
@@ -150,7 +150,7 @@ app.get('/oauth2', function(req, res) {
     .then(response => {
       saveTokenForUser(user, response.data.access_token);
       res.sendFile(path.join(dist, 'logged_in.html'));
-      respond(response_url, {text : 'You are logged in as: ' + response.data.user.username + " - " + response.data.user.email});
+      respond(responseUrl, {text : 'You are logged in as: ' + response.data.user.username + " - " + response.data.user.email});
     })
     .catch(error => {
       console.log(error);
