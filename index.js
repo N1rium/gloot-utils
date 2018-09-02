@@ -83,6 +83,18 @@ slack.addRoute({path : "/slack/guser", login: false, handler: (req, res) => {
   }).catch(error => handleError(error, req.body.response_url));
 }});
 
+slack.addRoute({path : "/slack/guserFull", login: true, handler: (req, res) => {
+  console.log(tokens, tokens);
+  res.status(200).json({text : "Fetching user data"});
+  callAPI(req, "POST", "/user/search/findByIds/full", [req.body.text]).then(response => {
+    respond(req.body.response_url, {attachments: [{
+      title: (response.data.length > 0) ? response.data[0].username : "No user found",
+      text: JSON.stringify(response.data)
+    }]});
+  }).catch(error => handleError(error, req.body.response_url));
+}});
+
+
 var callAPI = function (req, method, path, data) {
   let headers = {};
   if (req.token)
