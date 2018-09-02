@@ -52,7 +52,7 @@ var handleError = function(error, url) {
   respond(url, {attachments : [
     {
       title: "Error",
-      text: error,
+      text: JSON.stringify(error),
       footer: "Error from the server"
     }
   ]});
