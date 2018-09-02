@@ -12,14 +12,15 @@ const API_BASE_PATH = process.env.API_BASE_PATH || 'https://api.gloot.com';
 const uuidv1 = require('uuid/v1');
 const jwtDecode = require('jwt-decode');
 const rawBodySaver = require('./raw-body').rawBodySaver;
-const { slackSignatureValidation, slack } = require('./gloot-slack');
+const { slackSignatureValidation, slackMiddleware, slack } = require('./gloot-slack');
 
 var tokens = { };
 var states = { };
 
-const slackLoggedInMiddleware = slack({login: true}, (user) => tokens[user], (user, url) => generateLoginUrl(user, url));
+const slackLoggedInMiddleware = slackMiddleware({login: false}, (user) => tokens[user], (user, url) => generateLoginUrl(user, url));
 app.use(bodyParser.json({verify: rawBodySaver}), express.static(dist));
 app.use(bodyParser.urlencoded({verify: rawBodySaver, extended: false}));
+app.use(slackMiddleware((user) => tokens[user], (user, url) => generateLoginUrl(user, url)));
 
 var saveTokenForUser = function(user, token) {
   tokens[user] = token;
@@ -40,9 +41,53 @@ var generateLoginUrl = function(user, responseUrl) {
   return API_BASE_PATH + path;
 }
 
-app.post('/slack/glogin', slackLoggedInMiddleware, function(req, res) {
+var handleError = function(error, url) {
+  respond(url, {attachments : [
+    {
+      title: "Error",
+      text: error,
+      footer: "Error from the server"
+    }
+  ]});
+}
+
+slack.addRoute({path : "/slack/glogin", login: true, handler: (req, res) => {
   res.status(200).json({text : generateLoginUrl(req.body.user_id, req.body.response_url)});
-});
+}});
+
+slack.addRoute({path : "/slack/whoami", login: true, handler: (req, res) => {
+  res.status(200).json({text : "Fetching user data"});
+  callAPI(req, "GET", "/user", '').then(response => {
+    respond(req.body.response_url, {attachments: [{
+      title: response.body.username,
+      text: response.body
+    }]});
+  }).catch(error => handleError(error, req.body.response_url));
+}});
+
+slack.addRoute({path : "/slack/guser", login: false, handler: (req, res) => {
+  res.status(200).json({text : "Fetching user data"});
+  callAPI(req, "GET", "/user/" + req.body.text, '').then(response => {
+    respond(req.body.response_url, {attachments: [{
+      title: response.body.username,
+      text: response.body
+    }]});
+  }).catch(error => handleError(error, req.body.response_url));
+}});
+
+var callAPI = function (req, method, path, data) {
+  var headers = {};
+  if (req.token)
+    headers.Authorization = "Bearer " + req.token;
+
+  var options = {
+    method: method,
+    url: API_BASE_PATH + "/api/v1" + path,
+    data: data,
+    headers
+  }
+  return axios(options);
+}
 
 var respond = function(url, data) {
   var options = {

@@ -3,23 +3,46 @@
 const crypto = require('crypto');
 const SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET || '5902a6952b267a565aca98f81f601398';
 
-exports.slack = function (options, tokenProvider, loginUrlProvider) {
-    return function(req, res, next) {
-        exports.slackSignatureValidation(req, res, () => {
-            req.token = tokenProvider(req.body.slack_user);
-            console.log(req.body);
-            if (options.login && !req.token) {
+var Slack = function (options) {
+    var routes = {};
+    this.addRoute = function (route) {
+        routes[route.path] = {
+            login: route.login,
+            handler: route.handler
+        };
+    };
+    this.route = function (req, res, tokenProvider, loginUrlProvider, next) {
+        var route = routes[req.path];
+        if (!route)
+            next();
+        else {
+            req.token = tokenProvider(req.body.user_id);
+            if (route.login && !req.token) {
                 res.status(200).json({
                     attachments: [
                         {
                             "title": "Login required",
-                            "text": loginUrlProvider(req.body.slack_user, req.body.response_url)
+                            "text": loginUrlProvider(req.body.user_id, req.body.response_url)
                         }
                     ]
                 });
                 return; // skip next
             }
-            next();
+
+            route.handler(req, res);
+        }
+    }
+};
+
+var slack = new Slack();
+
+exports.slack = slack;
+
+exports.slackMiddleware = function (options, tokenProvider, loginUrlProvider) {
+    return function (req, res, next) {
+        console.log("inside slackMiddleware");
+        exports.slackSignatureValidation(req, res, () => {
+            slack.route(req, res, tokenProvider, loginUrlProvider, next);
         });
     }
 };
@@ -38,7 +61,7 @@ exports.slackSignatureValidation = function (req, res, next) {
         .update(string)
         .digest('hex');
 
-    if (signature != expectedSignature) {
+    if (false && signature != expectedSignature) {
         res.status(200).json({
             text: "ERROR: Invalid signature", attachments: [
                 { text: "Expected: " + expectedSignature },
