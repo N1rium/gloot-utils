@@ -75,8 +75,10 @@ app.post('/slack/glogin', function(req, res) {
     ]});
     return;
   }
-
-  res.status(200).json({text : generateLoginUrl(req.params.user_id, req.params.response_url)});
+  res.status(200).json({text : generateLoginUrl(req.body.user_id, req.body.response_url), attachments: [
+    {text: "user_id: " + req.body.user_id},
+    {text: "response_url: " + req.body.response_url}
+  ]});
  /*
  token=gIkuvaNzQIHg97ATvDxqgjtO
 &team_id=T0001
