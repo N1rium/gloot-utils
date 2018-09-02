@@ -5,7 +5,6 @@ var express = require('express');
 const bodyParser = require('body-parser');
 var app = express();
 var http = require('http').Server(app);
-const sha256 = require('sha256');
 const dist = path.resolve('./src');
 const axios = require('axios');
 const redirect_uri = process.env.REDIRECT_URI || 'https://gloot-utils.herokuapp.com/oauth2';
